@@ -41,23 +41,20 @@ RUN apt-get install -y \
   libimagequant-dev \
   liborc-0.4-dev \
   libgsf-1-dev \
-  libcgif-dev
+  libcgif-dev \
+  libde265-dev \
+  libaom-dev \
+  cmake
 
-# use latest libheif from the ppa
-RUN apt-get update && apt-get install -y \
-  software-properties-common \
-  wget \
-  && add-apt-repository ppa:strukturag/libheif \
-  && apt-get update \
-  && apt-get install -y \
-  libheif-dev \
-  libheif1
+# Clone the libheif repository
+RUN git clone https://github.com/strukturag/libheif.git /libheif
 
-# After installing libheif
-RUN cp /usr/lib/x86_64-linux-gnu/libheif.so* /usr/local/lib/ \
-  && mkdir -p /usr/local/lib/libheif/ \
-  && cp -r /usr/lib/x86_64-linux-gnu/libheif/plugins /usr/local/lib/libheif/
-
+# Build and install libheif
+WORKDIR /libheif/build
+RUN cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local && \
+  make -j$(nproc) && \
+  make install
+  
 WORKDIR /usr/local/src
 
 # build to this prefix 
@@ -140,13 +137,13 @@ RUN ruby -e 'require "vips"; puts "ruby-vips: libvips #{Vips::LIBRARY_VERSION}"'
 # docker run -it --rm --name my_container libvips-heroku-22:8.16.0 bash
 # 
 # Run in another terminal
-# docker cp ./test-images/IMG_8406.HEIC my_container:/tmp/IMG_8406.HEIC
+# docker cp ./test-images/Image.heic my_container:/tmp/Image.heic
 # 
 # Copy and paste the following into the ssh session to test the conversion
 # ruby -e '
 # require "vips"
-# puts "Starting conversion of /tmp/IMG_8406.HEIC to /tmp/IMG_8406.jpg"
-# image = Vips::Image.new_from_file("/tmp/IMG_8406.HEIC")
-# image.write_to_file("/tmp/IMG_8406.jpg")
-# puts "Converted /tmp/IMG_8406.HEIC to /tmp/IMG_8406.jpg"
+# puts "Starting conversion of /tmp/Image.heic to /tmp/Image.jpg"
+# image = Vips::Image.new_from_file("/tmp/Image.heic")
+# image.write_to_file("/tmp/Image.jpg")
+# puts "Converted /tmp/Image.heic to /tmp/Image.jpg"
 # '
