@@ -1,16 +1,16 @@
-ARG STACK_VERSION
+ARG STACK_VERSION=22
 FROM heroku/heroku:$STACK_VERSION
 
-ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
   && apt-get install -y \
-    build-essential \
-    libtool \
-    wget \
-    python3-pip \
-    ninja-build \
-    pkg-config 
+  build-essential \
+  libtool \
+  wget \
+  python3-pip \
+  ninja-build \
+  pkg-config 
 
 RUN pip3 install meson
 
@@ -41,8 +41,20 @@ RUN apt-get install -y \
   libimagequant-dev \
   liborc-0.4-dev \
   libgsf-1-dev \
-  libcgif-dev \
-  libheif-dev
+  libcgif-dev
+
+# use latest libheif from the ppa
+RUN apt-get update && apt-get install -y \
+  software-properties-common \
+  wget \
+  && add-apt-repository ppa:strukturag/libheif \
+  && apt-get update \
+  && apt-get install -y \
+  libheif-dev \
+  libheif1
+
+# Check the version of libheif
+RUN heif-convert --version || echo "heif-convert command not found"
 
 WORKDIR /usr/local/src
 
@@ -72,23 +84,25 @@ RUN wget ${VIPS_URL}/v${VIPS_VERSION}/v${VIPS_VERSION}.tar.gz \
   && tar xzf v${VIPS_VERSION}.tar.gz \
   && cd libvips-${VIPS_VERSION} \
   && meson setup build \
-    --prefix=$PREFIX \
-	  --libdir=lib \
-	  --buildtype=release \
-    # obscure file format that nobody will use \
-	  -Dradiance=false \
-    # obscure file format that nobody will use \
-	  -Danalyze=false \
-    # modules cause issues with loading heif files in ruby-vips \
-	  -Dmodules=disabled \
-    # allows omitting gobject-introspection library \
-	  -Dintrospection=false \
-	&& cd build \
-	&& meson compile \
-	&& meson install
+  --prefix=$PREFIX \
+  --libdir=lib \
+  --buildtype=release \
+  # obscure file format that nobody will use \
+  -Dradiance=false \
+  # obscure file format that nobody will use \
+  -Danalyze=false \
+  # modules cause issues with loading heif files in ruby-vips \
+  -Dmodules=disabled \
+  # allows omitting gobject-introspection library \
+  -Dintrospection=disabled \
+  # use latest libheif from the ppa \
+  -Dheif=enabled \
+  && cd build \
+  && meson compile \
+  && meson install
 
 # clean and package
-ARG STACK_VERSION
+ARG STACK_VERSION=22
 RUN cd $PREFIX \
   && rm -rf bin/vipsprofile \
   && rm -rf lib/*.a lib/*.la lib/python* \
@@ -103,7 +117,7 @@ RUN cd $PREFIX \
 RUN ldconfig
 
 # Store configuration for easy viewing in the repo
-ARG STACK_VERSION
+ARG STACK_VERSION=22
 RUN cd $PREFIX \
   && echo "$ vips --vips-version" > "build/heroku-$STACK_VERSION.config.log" \
   && vips --vips-version >> "build/heroku-$STACK_VERSION.config.log" \
@@ -117,3 +131,20 @@ RUN cd $PREFIX \
 RUN apt-get install -y ruby-dev
 RUN gem install ruby-vips
 RUN ruby -e 'require "vips"; puts "ruby-vips: libvips #{Vips::LIBRARY_VERSION}"'
+# 
+# Test the conversion of a HEIC image to JPEG
+# 
+# Run the container in interactive with automatic cleanup
+# docker run -it --rm --name my_container libvips-heroku-22:8.16.0 bash
+# 
+# Run in another terminal
+# docker cp ./test-images/IMG_8406.HEIC my_container:/tmp/IMG_8406.HEIC
+# 
+# Copy and paste the following into the ssh session to test the conversion
+# ruby -e '
+# require "vips"
+# puts "Starting conversion of /tmp/IMG_8406.HEIC to /tmp/IMG_8406.jpg"
+# image = Vips::Image.new_from_file("/tmp/IMG_8406.HEIC")
+# image.write_to_file("/tmp/IMG_8406.jpg")
+# puts "Converted /tmp/IMG_8406.HEIC to /tmp/IMG_8406.jpg"
+# '

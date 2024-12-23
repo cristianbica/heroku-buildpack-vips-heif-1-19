@@ -1,5 +1,8 @@
-heroku-buildpack-vips
-=====================
+# heroku-buildpack-vips
+
+## Updates
+
+I build this buildpack to support heroku-22 with libheif 1.19.3 built-in to resolve [this issue](https://github.com/strukturag/libheif/issues/1190).
 
 ## Disclaimer
 
@@ -44,6 +47,7 @@ being completely different. The build script uses docker and also includes pdf
 support via poppler.
 
 Additionally, if you are planning to use [sharp](https://github.com/lovell/sharp), you may also need the following packages:
+
 - libheif-dev
 - libfftw3-dev
 - libwebp-dev
@@ -57,7 +61,6 @@ with pdf support on heroku. Thank you John!
 ---
 
 Heroku buildpack with [libvips](https://github.com/libvips/libvips) installed.
-
 
 ## Usage
 
