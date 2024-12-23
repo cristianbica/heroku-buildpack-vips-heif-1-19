@@ -53,8 +53,12 @@ RUN apt-get update && apt-get install -y \
   libheif-dev \
   libheif1
 
-# Check the version of libheif
-RUN heif-convert --version || echo "heif-convert command not found"
+# After installing libheif
+RUN cp /usr/lib/x86_64-linux-gnu/libheif.so* /usr/local/lib/ \
+  && cp -r /usr/lib/x86_64-linux-gnu/libheif/plugins /usr/local/lib/libheif/
+
+ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
+
 
 WORKDIR /usr/local/src
 
